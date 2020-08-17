@@ -6,10 +6,11 @@ use List::Util qw(min max);
 use Time::HiRes qw(gettimeofday tv_interval);
 use FindBin;
 use lib $FindBin::Bin;
-require config;
+#require config;
 $ENV{SAC_DISPLAY_COPYRIGHT}=0;
 
 my ($tempdir, $workdir) = @ARGV;
+my $threshold = 8;
 match ($tempdir, $workdir);
 
 sub match {
@@ -18,7 +19,7 @@ sub match {
     my $num = 0;
     my @corfile;
     my ($b, $e, $evlo, $evla, $evdp, $kztime, $kzdate);
-    foreach (glob $temdir/*.BH?) {
+    foreach (glob "$tempdir/*.BH?") {
         my ($file) = (split m/\//, $_)[-1];
         next unless (-e "$workdir/$file");
         (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_`;
@@ -54,8 +55,9 @@ sub sum {
     my $num = @in;
     my @info = split m/\n/, `eqsum $threshold $num @in`;
     open (OUT, "> result_$id.txt") or die;
-    foreach @info {
+    foreach (@info) {
         my ($time, $cc, $mad, $th) = (split m/\s+/)[1..4];
+print "$_\n";
         print OUT "$kzdate $kztime $time $evlo $evla $evdp $mad $th $cc\n";
     }
     close (OUT);
