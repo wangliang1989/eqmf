@@ -23,7 +23,7 @@ sub match {
         my ($file) = (split m/\//, $_)[-1];
         next unless (-e "$workdir/$file");
         (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_`;
-        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $_`;
+        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $workdir/$file`;
         my (undef, $bi, $ei) = split m/\s+/, `eqcor $workdir/$file $_ $workdir/${id}-${file}`;
         my $b = $bi unless (defined($b));
         my $e = $ei unless (defined($e));

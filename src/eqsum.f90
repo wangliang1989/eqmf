@@ -47,7 +47,7 @@ th = mad * threshold
 do j = 1, head%npts
     if (x(j) >= th) then
         time = (j - 1) * head%delta + head%b
-        write(*,100) time, x(j), mad, th
+        write(*,*) time, x(j), mad, th
     end if
 end do
 100 format(3I10, F15.2, 3ES25.10)
