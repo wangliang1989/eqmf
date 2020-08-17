@@ -1,0 +1,20 @@
+FC = ifort -O2
+all: sacio.mod module_eqcor.mod eqcor eqsum clean
+
+sacio.mod: sacio.f90
+	$(FC) -c $^
+
+module_eqcor.mod: module_eqcor.f90
+	$(FC) -c $^
+
+%.o: %.f90
+	$(FC) -c $^
+
+eqcor: %: %.o sacio.o module_eqcor.o
+	$(FC) $^ -o $@
+
+eqsum: %: %.o sacio.o
+	$(FC) $^ -o $@
+
+clean:
+	-rm *.o *.mod 
