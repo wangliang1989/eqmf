@@ -41,11 +41,8 @@ if (flag == 0) then
     head%evdp = heady%evdp
     call sub_norm(norm, x, size(y), npts)
     call sub_cor(x, y, norm, result, flag)
+    head%depmax = maxval(result)
     call sacio_writesac(out, head, result, flag)
-    deallocate(out)
-    deallocate(y)
-    deallocate(result)
 end if
 
-write (*,*) head%b, head%e
 end program eqcor
