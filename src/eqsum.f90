@@ -39,7 +39,7 @@ do while (i <= command_argument_count())
     i = i + 1
 end do
 
-x = x / (i - 3)
+x = x / num
 mean = sum(x) / head%npts
 sigma = sqrt (sum((x - mean) * (x - mean)) / head%npts)
 mad = sigma / 1.4826
