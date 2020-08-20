@@ -8,12 +8,11 @@ use Time::HiRes qw(gettimeofday tv_interval);
 #use lib $FindBin::Bin;
 $ENV{SAC_DISPLAY_COPYRIGHT}=0;
 
-my $threshold = 15;
+my $threshold = 7;
 foreach my $workdir (@ARGV) {
     die "no $workdir" unless (-d $workdir);
     foreach my $tempdir (glob "template/*"){
         match ($tempdir, $workdir) if (-d $tempdir);
-        last;
     }
 }
 
@@ -53,6 +52,7 @@ sub fillz {
 sub sum {
     my ($result, $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) = @_;
     my @info = split m/\n/, `eqsum $threshold $num $corfile`;
+    mkdir "result";
     open (OUT, "> $result") or die;
     foreach (@info) {
         my ($time, $cc, $mad, $th) = (split m/\s+/)[1..4];
