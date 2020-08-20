@@ -8,7 +8,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 #use lib $FindBin::Bin;
 $ENV{SAC_DISPLAY_COPYRIGHT}=0;
 
-my $threshold = 7;
+my $threshold = 8;
 foreach my $workdir (@ARGV) {
     die "no $workdir" unless (-d $workdir);
     foreach my $tempdir (glob "template/*"){
@@ -19,6 +19,7 @@ foreach my $workdir (@ARGV) {
 sub match {
     my ($tempdir, $workdir) = @_;
     my ($id) = (split m/\//, $tempdir)[-1];
+    print "$workdir $id\n";
     my $num = 0;
     my $corfile = " ";
     my ($evlo, $evla, $evdp, $kztime, $kzdate);
