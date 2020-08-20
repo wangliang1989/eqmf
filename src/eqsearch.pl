@@ -4,14 +4,18 @@ use warnings;
 use Parallel::ForkManager;
 use List::Util qw(min max);
 use Time::HiRes qw(gettimeofday tv_interval);
-use FindBin;
-use lib $FindBin::Bin;
-#require config;
+#use FindBin;
+#use lib $FindBin::Bin;
 $ENV{SAC_DISPLAY_COPYRIGHT}=0;
 
-my ($tempdir, $workdir) = @ARGV;
 my $threshold = 15;
-match ($tempdir, $workdir);
+foreach my $workdir (@ARGV) {
+    die "no $workdir" unless (-d $workdir);
+    foreach my $tempdir (glob "template/*"){
+        match ($tempdir, $workdir) if (-d $tempdir);
+        last;
+    }
+}
 
 sub match {
     my ($tempdir, $workdir) = @_;
@@ -20,24 +24,31 @@ sub match {
     my $corfile = " ";
     my ($evlo, $evla, $evdp, $kztime, $kzdate);
     unlink glob "$workdir/*.cor";
-    foreach (glob "$tempdir/*.[enz]") {
-        my ($file) = (split m/\//, $_)[-1];
+    foreach (glob "$tempdir/*") {
+        my ($tempfile) = (split m/\//, $_)[-1];
+        #3J_BLHC.z.P
+        my ($sta, $q) = split m/\./, $tempfile;
+        my $file = "${sta}.${q}";
         next unless (-e "$workdir/$file");
-        (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_`;
-        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $workdir/$file`;
-        system "eqcor $workdir/$file $_ $workdir/${id}-${file}.cor";
+        (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_` unless (defined($evlo));
+        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $workdir/$file` unless (defined($kzdate));
+        system "eqcor $workdir/$file $_ $workdir/${id}_${file}.cor";
         $num++;
-        $corfile = "$corfile $workdir/${id}-${file}.cor";
-        open(SAC, "| sac") or die "Error in opening sac\n";
-        print SAC "wild echo off \n";
-        print SAC "cuterr fillz\n";
-        print SAC "cut 0 86400\n";
-        print SAC "r $workdir/${id}-${file}.cor\n";
-        print SAC "w over\n";
-        print SAC "q\n";
-        close(SAC);
+        $corfile = "$corfile $workdir/${id}_${file}.cor";
+        fillz ("$workdir/${id}_${file}.cor");
     }
-    sum("$workdir/result_${id}.txt", $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) if ($num > 0);
+    sum("result/${id}_${workdir}.txt", $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) if ($num > 0);
+}
+sub fillz {
+    my ($file) = @_;
+    open(SAC, "| sac") or die "Error in opening sac\n";
+    print SAC "wild echo off \n";
+    print SAC "cuterr fillz\n";
+    print SAC "cut 0 86400\n";
+    print SAC "r $file\n";
+    print SAC "w over\n";
+    print SAC "q\n";
+    close(SAC);
 }
 sub sum {
     my ($result, $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) = @_;
