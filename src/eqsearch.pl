@@ -4,59 +4,62 @@ use warnings;
 use Parallel::ForkManager;
 use List::Util qw(min max);
 use Time::HiRes qw(gettimeofday tv_interval);
-use FindBin;
-use lib $FindBin::Bin;
-require config;
+#use FindBin;
+#use lib $FindBin::Bin;
 $ENV{SAC_DISPLAY_COPYRIGHT}=0;
 
-my ($tempdir, $workdir) = @ARGV;
-match ($tempdir, $workdir);
+my $threshold = 6;
+foreach my $workdir (@ARGV) {
+    die "no $workdir" unless (-d $workdir);
+    foreach my $tempdir (glob "template/*"){
+        match ($tempdir, $workdir) if (-d $tempdir);
+    }
+}
 
 sub match {
     my ($tempdir, $workdir) = @_;
     my ($id) = (split m/\//, $tempdir)[-1];
+    print "$workdir $id\n";
     my $num = 0;
-    my @corfile;
-    my ($b, $e, $evlo, $evla, $evdp, $kztime, $kzdate);
-    foreach (glob $temdir/*.BH?) {
-        my ($file) = (split m/\//, $_)[-1];
+    my $corfile = " ";
+    my ($evlo, $evla, $evdp, $kztime, $kzdate);
+    unlink glob "$workdir/*.cor";
+    foreach (glob "$tempdir/*") {
+        my ($tempfile) = (split m/\//, $_)[-1];
+        #3J_BLHC.z.P
+        my ($sta, $q) = split m/\./, $tempfile;
+        my $file = "${sta}.${q}";
         next unless (-e "$workdir/$file");
-        (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_`;
-        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $_`;
-        my (undef, $bi, $ei) = split m/\s+/, `eqcor $workdir/$file $_ $workdir/${id}-${file}`;
-        my $b = $bi unless (defined($b));
-        my $e = $ei unless (defined($e));
-        $b = min($b, $bi);
-        $e = max($e, $ei);
+        (undef, $evlo, $evla, $evdp) = split m/\s+/, `saclst evlo evla evdp f $_` unless (defined($evlo));
+        (undef, $kzdate, $kztime) = split m/\s+/, `saclst kzdate kztime f $workdir/$file` unless (defined($kzdate));
+        system "eqcor $workdir/$file $_ $workdir/${id}_${file}.cor";
         $num++;
-        push @corfile, "$workdir/${id}-${file}";
+        $corfile = "$corfile $workdir/${id}_${file}.cor";
+        fillz ("$workdir/${id}_${file}.cor");
     }
-    sum($id, $kzdate, $kztime, $evlo, $evla, $evdp, $b, $e, @corfile) if ($num > 0);
+    sum("result/${id}_${workdir}.txt", $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) if ($num > 0);
 }
-sub sum {
-    my @in = @_;
-    my $id = shift @in;
-    my $kzdate = shift @in;
-    my $kztime = shift @in;
-    my $evlo = shift @in;
-    my $evla = shift @in;
-    my $evdp = shift @in;
-    my $b = shift @in;
-    my $e = shift @in;
+sub fillz {
+    my ($file) = @_;
     open(SAC, "| sac") or die "Error in opening sac\n";
     print SAC "wild echo off \n";
     print SAC "cuterr fillz\n";
-    print SAC "cut $b $e\n";
-    print SAC "r @in\n";
-    print SAC "write over\n";
+    print SAC "cut 0 86400\n";
+    print SAC "r $file\n";
+    print SAC "w over\n";
     print SAC "q\n";
     close(SAC);
-    my $num = @in;
-    my @info = split m/\n/, `eqsum $threshold $num @in`;
-    open (OUT, "> result_$id.txt") or die;
-    foreach @info {
+}
+sub sum {
+    my ($result, $kzdate, $kztime, $evlo, $evla, $evdp, $num, $corfile) = @_;
+    my @info = split m/\n/, `eqsum $threshold $num $corfile`;
+    mkdir "result";
+    open (OUT, "> $result") or die;
+    foreach (@info) {
         my ($time, $cc, $mad, $th) = (split m/\s+/)[1..4];
         print OUT "$kzdate $kztime $time $evlo $evla $evdp $mad $th $cc\n";
     }
     close (OUT);
+    my @to_delete = split m/\s+/, $corfile;
+    unlink @to_delete;
 }
